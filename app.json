@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "ControlCow",
+    "slug": "ControlCow",
+    "version": "1.0.0",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "android": {
+      "package": "com.smartloadtech.ControlCow"
+    }
+  }
+}
