@@ -3,59 +3,21 @@
     {
       "id": "1",
       "type": "BPA",
-      "amount_of_milk_produced": "300",
-      "number_of_cows_head": "17",
-      "had_supervision": true,
+      "from": {
+        "name": "Luciano Camargo"
+      },
       "farmer": {
         "name": "Fazenda São Rock",
         "city": "São Rock"
       },
-      "from": {
-        "name": "Luciano Camargo"
-      },
       "to": {
         "name": "Fernando Siqueira"
       },
-      "created_at": "2022-02-01T10:10:21.748Z",
-      "updated_at": "2022-02-01T21:29:21.748Z"
-    },
-    {
-      "id": "6269b2b611bb36b4f4479f0a",
-      "type": "da",
-      "from": {
-        "name": "tESTE4ee"
-      },
-      "farmer": {
-        "name": "test3",
-        "city": "DAaa"
-      },
-      "to": {
-        "name": "sda"
-      },
-      "amount_of_milk_produced": 45,
-      "number_of_cows_head": 54,
-      "had_supervision": false,
-      "created_at": "2022-04-27T21:16:38.000Z",
-      "updated_at": "2022-04-27T21:29:38+00:00"
-    },
-    {
-      "id": "6269b6b811bb36b4f4479f0b",
-      "type": "BHA",
-      "amount_of_milk_produced": 45,
-      "number_of_cows_head": 54,
+      "amount_of_milk_produced": 300,
+      "number_of_cows_head": 17,
       "had_supervision": true,
-      "farmer": {
-        "name": "opa",
-        "city": "opa"
-      },
-      "from": {
-        "name": "Opa"
-      },
-      "to": {
-        "name": "opa"
-      },
-      "created_at": "2022-04-27T21:33:44.000Z",
-      "updated_at": "2022-04-27T21:33:44.000Z"
+      "created_at": "2022-02-01T10:10:21.748Z",
+      "updated_at": "2022-04-28T15:38:16+00:00"
     }
   ]
 }

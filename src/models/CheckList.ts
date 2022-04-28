@@ -2,7 +2,7 @@ import { Realm, createRealmContext } from "@realm/react";
 import moment from "moment";
 
 export class Checklist extends Realm.Object {
-    id!: Realm.BSON.ObjectId;
+    id!: string;
     type!: string;
     amount_of_milk_produced!: number;
     number_of_cows_head!: number;
@@ -17,7 +17,7 @@ export class Checklist extends Realm.Object {
 
     static generate(type: string, amount_of_milk_produced: number, number_of_cows_head: number, had_supervision: boolean, name: string, city: string, from: string, to: string) {
         return {
-          id: new Realm.BSON.ObjectId(),
+          id: String(new Realm.BSON.UUID()),
           type,
           amount_of_milk_produced,
           number_of_cows_head,
@@ -35,7 +35,7 @@ export class Checklist extends Realm.Object {
         name: 'Checklist',
         primaryKey: 'id',
         properties: {
-            id: 'objectId',
+            id: 'string',
             type: 'string',
             amount_of_milk_produced: 'int',
             number_of_cows_head: 'int',

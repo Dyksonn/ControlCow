@@ -8,6 +8,8 @@ import React, {
     useState
 } from 'react';
 import moment from "moment";
+import { Realm } from '@realm/react';
+import { useNetInfo } from '@react-native-community/netinfo';
 
 import CheckListContextRealm, { Checklist } from "../models/CheckList";
 import api from '../service/api';
@@ -52,8 +54,9 @@ function CheckListProvider({ children }: CheckListProviderProps) {
 
     const realm = useRealm();
     const result = useQuery(Checklist);
+    const netInfo = useNetInfo();
 
-    const checklistDb: any = useMemo(() => result.sorted("created_at"), [result]);
+    const checklistDb: Realm.Results<Checklist> | [] = useMemo(() => result.sorted("created_at"), [result]);
     
     const handleAddChecklist = useCallback((checklist: CheckListSend): void => {
         realm.write(() => {
@@ -85,7 +88,7 @@ function CheckListProvider({ children }: CheckListProviderProps) {
         try {
             const response = await api.post('checklists', send);
 
-            console.log(response.status);
+            console.log('Criado com sucesso');
         } catch (error) {
             console.log(error)
         }
@@ -95,60 +98,96 @@ function CheckListProvider({ children }: CheckListProviderProps) {
     const handleDeleteChecklist = useCallback((
         checklist: Checklist
     ): void => {
-        deleteApiFarm(String(checklist.id));
-        realm.write(() => {
-            realm.delete(realm?.objectForPrimaryKey('Checklist', checklist.id));
-        });
+        
+        if (netInfo.isConnected) deleteApiFarm(checklist)
+        else {
+            realm.write(() => {
+                realm.delete(realm.objectForPrimaryKey('Checklist', checklist.id));
+            });
+        }
     }, [realm]);
 
-    async function deleteApiFarm(id: string) {
+    async function deleteApiFarm(checklist: Checklist) {
         try {
-            const response = await api.delete(`checklists/${id}`);
+            const response = await api.delete(`checklists/${checklist.id}`);
 
-            console.log(response.status);
+            console.log('Deletado com sucesso')
+            realm.write(() => {
+                realm.delete(realm.objectForPrimaryKey('Checklist', checklist.id));
+            });
+
+            apiService();
         } catch (error) {
             console.log(error)
         }
     }
 
     async function apiService() {
-        console.log('Aquii')
-        
         try {
             const response = await api.get<any>('checklists');
 
-            let data: Realm.Results<Checklist> | [] = [];
+            let data: any = [];
+            let reduced: any = [];
+            let reducedOn: any = [];
+            
+            checklistDb.forEach(i => data.push(i))
 
-            // for (let i = 0;response.data.length >= i; i++) {
-            //     let insert = {
-            //         id: response.data[i].id,
-            //         type: response.data[i].type,
-            //         amount_of_milk_produced: response.data[i].amount_of_milk_produced,
-            //         number_of_cows_head: response.data[i].number_of_cows_head,
-            //         had_supervision: response.data[i].had_supervision,
-            //         name: response.data[i].farmer.name,
-            //         city: response.data[i].farmer.city,
-            //         from: response.data[i].from.name,
-            //         to: response.data[i].to.name,
-            //         created_at: response.data[i].created_at,
-            //         updated_at: response.data[i].updated_at,
-            //     }
+            for (let i = 0;i < response.data.length; i++) {
+                const insert = {
+                    id: response.data[i].id,
+                    type: response.data[i].type,
+                    amount_of_milk_produced: Number(response.data[i].amount_of_milk_produced),
+                    number_of_cows_head: Number(response.data[i].number_of_cows_head),
+                    had_supervision: response.data[i].had_supervision,
+                    name: response.data[i].farmer.name,
+                    city: response.data[i].farmer.city,
+                    from: response.data[i].from.name,
+                    to: response.data[i].to.name,
+                    created_at: response.data[i].created_at,
+                    updated_at: response.data[i].updated_at,
+                }
+                
+                
+                data.push(insert);
+            }
 
-            //     data.push(insert);
-            // }
+            data.forEach((item) => {
+                var duplicated  = reduced.findIndex(redItem => {
+                    return item.id == redItem.id;
+                }) > -1;
 
-           
+                if(!duplicated) {
+                    if (checklistDb.findIndex(i => i.id == item.id) > -1) return;
 
-            setCheckList(checklistDb);
+                    realm.write(() => {
+                        realm.create('Checklist', item)
+                    })
+                }
+            });
+
+
+            checklistDb.forEach(i => {
+                var duplicated  = reduced.findIndex(redItem => {
+                    return i.id == redItem.id;
+                }) > -1;
+
+            
+                if(!duplicated) {
+                    if (response.data.findIndex(i => i.id == i.id) > -1) return;
+
+                    saveApiNewFarm(i)
+                }
+            });
         } catch(error) {
             console.log('wee', error);
         }
     }
 
     useEffect(() => {
-        apiService();
-        // setCheckList(checklistDb);
-    }, [result])
+        setCheckList(checklistDb)
+
+        if (netInfo.isConnected) apiService()
+    }, [result, netInfo.isConnected])
 
     const handleUpdateChecklist = useCallback(
         async (checklist: Checklist, update: CheckListUpdate) => {
@@ -175,7 +214,6 @@ function CheckListProvider({ children }: CheckListProviderProps) {
             try {
                 const response = await api.put(`checklists/${checklist.id}`, data);
 
-                console.log(response.status);
                 realm.write(() => {
                     checklist.from = update.from;
                     checklist.name = update.name;
