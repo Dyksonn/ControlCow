@@ -116,7 +116,6 @@ function CheckListProvider({ children }: CheckListProviderProps) {
                 realm.delete(realm.objectForPrimaryKey('Checklist', checklist.id));
             });
 
-            apiService();
         } catch (error) {
             console.log(error)
         }
