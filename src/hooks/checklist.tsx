@@ -233,7 +233,7 @@ function CheckListProvider({ children }: CheckListProviderProps) {
 
             
         } catch(error) {
-            console.log('wee', error);
+            console.log('error', error);
         }
     }
 
