@@ -36,6 +36,7 @@ interface CheckListUpdate {
     city: string;
     from: string;
     to: string;
+    updated_at: string;
 }
 
 interface CheckListContextData {
@@ -93,18 +94,62 @@ function CheckListProvider({ children }: CheckListProviderProps) {
             console.log(error)
         }
     }
+
+    const handleUpdateChecklist = useCallback(
+        (checklist: Checklist, update: CheckListUpdate): void => {
+            const data = {
+                id: checklist.id,
+                type: checklist.type,
+                from: {
+                    name: update.from
+                },
+                farmer: {
+                    name: update.name,
+                    city: update.city
+                },
+                to: {
+                    name: update.to
+                },
+                amount_of_milk_produced: update.amount_of_milk_produced,
+                number_of_cows_head: update.number_of_cows_head,
+                had_supervision: checklist.had_supervision,
+                created_at: checklist.created_at,
+                updated_at: update.updated_at
+            }
+            
+            realm.write(() => {
+                checklist.from = update.from;
+                checklist.name = update.name;
+                checklist.city = update.city;
+                checklist.to = update.to;
+                checklist.amount_of_milk_produced = update.amount_of_milk_produced;
+                checklist.number_of_cows_head = update.number_of_cows_head;
+                checklist.updated_at = update.updated_at;
+                
+                updateApiFarm(checklist, data)
+            });
+        },
+        [realm],
+    );
+
+    async function updateApiFarm(checklist, data) {
+        try {
+            const response = await api.put(`checklists/${checklist.id}`, data);
+
+            console.log('Atualizado com sucesso')
+        } catch (error) {
+            console.log(error);
+        }
+    }
     
 
     const handleDeleteChecklist = useCallback((
         checklist: Checklist
     ): void => {
-        
-        if (netInfo.isConnected) deleteApiFarm(checklist)
-        else {
-            realm.write(() => {
-                realm.delete(realm.objectForPrimaryKey('Checklist', checklist.id));
-            });
-        }
+        deleteApiFarm(checklist);
+        realm.write(() => {
+            realm.delete(realm.objectForPrimaryKey('Checklist', checklist.id));
+        });
     }, [realm]);
 
     async function deleteApiFarm(checklist: Checklist) {
@@ -112,9 +157,6 @@ function CheckListProvider({ children }: CheckListProviderProps) {
             const response = await api.delete(`checklists/${checklist.id}`);
 
             console.log('Deletado com sucesso')
-            realm.write(() => {
-                realm.delete(realm.objectForPrimaryKey('Checklist', checklist.id));
-            });
 
         } catch (error) {
             console.log(error)
@@ -122,15 +164,12 @@ function CheckListProvider({ children }: CheckListProviderProps) {
     }
 
     async function apiService() {
+        let data: any = [];
+
+        checklistDb.forEach(i => data.push(i))
         try {
             const response = await api.get<any>('checklists');
-
-            let data: any = [];
-            let reduced: any = [];
-            let reducedOn: any = [];
             
-            checklistDb.forEach(i => data.push(i))
-
             for (let i = 0;i < response.data.length; i++) {
                 const insert = {
                     id: response.data[i].id,
@@ -150,33 +189,49 @@ function CheckListProvider({ children }: CheckListProviderProps) {
                 data.push(insert);
             }
 
-            data.forEach((item) => {
-                var duplicated  = reduced.findIndex(redItem => {
-                    return item.id == redItem.id;
-                }) > -1;
+            // Cria no banco a FAZENDA que foi criada pela api
+            if (data.length > checklistDb.length) {
+                data.forEach((item) => {
+                    var duplicated  = checklistDb.findIndex(redItem => {
+                        return item.id == redItem.id;
+                    }) > -1;
 
-                if(!duplicated) {
-                    if (checklistDb.findIndex(i => i.id == item.id) > -1) return;
+                    if(!duplicated) {
+                        realm.write(() => {
+                            realm.create('Checklist', item)
+                        })
+                    }
+                });
+            }
 
-                    realm.write(() => {
-                        realm.create('Checklist', item)
-                    })
-                }
-            });
-
-
-            checklistDb.forEach(i => {
-                var duplicated  = reduced.findIndex(redItem => {
-                    return i.id == redItem.id;
+            
+            // Cria na Api a FAZENDA que foi criada offline
+            checklistDb.forEach((item) => {
+                var duplicated  = data.findIndex(redItem => {
+                    return item.created_at == redItem.created_at;
                 }) > -1;
 
             
                 if(!duplicated) {
-                    if (response.data.findIndex(i => i.id == i.id) > -1) return;
-
-                    saveApiNewFarm(i)
+                    if (response.data.findIndex(i => i.id == item.id) > -1) return;
+                    saveApiNewFarm(item)
                 }
             });
+
+            // Verificar atualizacao do banco local
+            data.forEach((item) => {
+                var duplicated  = checklistDb.findIndex(redItem => {
+                    return moment(redItem.updated_at).format('HH:mm:ss') === moment(item.updated_at).format('HH:mm:ss');
+                }) > -1;
+
+                if(!duplicated) {
+                    checklistDb.forEach((itemUpdate) => {
+                        if (itemUpdate.id == item.id) handleUpdateChecklist(item, itemUpdate);
+                    })
+                }
+            });
+
+            
         } catch(error) {
             console.log('wee', error);
         }
@@ -188,46 +243,7 @@ function CheckListProvider({ children }: CheckListProviderProps) {
         if (netInfo.isConnected) apiService()
     }, [result, netInfo.isConnected])
 
-    const handleUpdateChecklist = useCallback(
-        async (checklist: Checklist, update: CheckListUpdate) => {
-            const data = {
-                id: checklist.id,
-                type: checklist.type,
-                from: {
-                    name: update.from
-                },
-                farmer: {
-                    name: update.name,
-                    city: update.city
-                },
-                to: {
-                    name: update.to
-                },
-                amount_of_milk_produced: update.amount_of_milk_produced,
-                number_of_cows_head: update.number_of_cows_head,
-                had_supervision: checklist.had_supervision,
-                created_at: checklist.created_at,
-                updated_at: moment().format()
-            }
-            
-            try {
-                const response = await api.put(`checklists/${checklist.id}`, data);
-
-                realm.write(() => {
-                    checklist.from = update.from;
-                    checklist.name = update.name;
-                    checklist.city = update.city;
-                    checklist.to = update.to;
-                    checklist.amount_of_milk_produced = update.amount_of_milk_produced;
-                    checklist.number_of_cows_head = update.number_of_cows_head;
-                    checklist.updated_at = data.updated_at;
-                });
-            } catch (error) {
-                console.log(error);
-            }
-        },
-        [realm],
-      );
+    
     
 
     return (

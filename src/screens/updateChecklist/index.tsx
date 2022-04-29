@@ -39,6 +39,7 @@ export function UpdateChecklist() {
             city: city,
             from: nameFarmer,
             to: supervisor,
+            updated_at: moment().format()
         }
 
         handleUpdateChecklist(route.params.checklistItem, data);
